@@ -12,9 +12,10 @@ Model name is converted to lowercase for the collection name:
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 
-# Example schemas (replace with your own):
+# Core application schemas for the dual-interface medication app
 
 class User(BaseModel):
     """
@@ -22,24 +23,32 @@ class User(BaseModel):
     Collection name: "user" (lowercase of class name)
     """
     name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    email: Optional[str] = Field(None, description="Email address")
+    role: str = Field("patient", description="Role: patient or caregiver")
+    patient_id: Optional[str] = Field(None, description="If caregiver, the patient this caregiver monitors")
 
-class Product(BaseModel):
+class Medication(BaseModel):
     """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
+    Medications assigned to a patient
+    Collection name: "medication"
     """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    user_id: str = Field(..., description="Patient user id")
+    name: str = Field(..., description="Medication name")
+    dosage: str = Field(..., description="Dosage description, e.g., '5mg' or '1 tablet'")
+    schedule_times: List[str] = Field(..., description="List of HH:MM times the medication should be taken each day")
+    inventory_count: int = Field(0, ge=0, description="Current pill count in inventory")
+    low_threshold: int = Field(10, ge=0, description="Threshold to trigger low-inventory alert")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class DoseEvent(BaseModel):
+    """
+    Records scheduled and taken doses
+    Collection name: "doseevent"
+    """
+    user_id: str = Field(..., description="Patient user id")
+    medication_id: str = Field(..., description="Medication id")
+    scheduled_time: datetime = Field(..., description="Scheduled date-time for this dose (UTC)")
+    taken_time: Optional[datetime] = Field(None, description="When the dose was confirmed (UTC)")
+    status: str = Field("scheduled", description="Status: scheduled|taken|missed|skipped")
 
 # Note: The Flames database viewer will automatically:
 # 1. Read these schemas from GET /schema endpoint
